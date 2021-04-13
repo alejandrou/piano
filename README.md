@@ -29,50 +29,124 @@ El trabajo se basa en hacer familiarizarse con la libreria Sound de Processing. 
 
 ## Decisiones adoptadas
 
-Las mayores decisiones tomadas y las que mas pruebas requirieron fue la colocación de los planetas y la iluminación.
+Las mayores decisiones tomadas y las que mas pruebas requirieron fue la clase encargada de crear el sonido de las notas y que no se superpusieran entre ellas.
 
 
-* Metodos que manejan tanto la cámara como la iluminación.
+* Clase MusicBox.
   ```
-  void setCamera() {
-    if (pause) camera(width/2.0, height/2.0, (height/2.0) / tan(PI*30.0 / 180.0), width/2.0, height/2.0, 0, 0, 1, 0);
-    else camera(posCam.x, posCam.y, posCam.z, x, height/2.0, 75*8+20, 0, 1, 0);
+  public class MusicBox {
+  Synthesizer synthesizer;
+  MidiChannel[] channels;
+  boolean noSound = false;
+
+  public void initialize() {
+    try {
+      if (!noSound) {
+        synthesizer = MidiSystem.getSynthesizer();
+        synthesizer.open();
+
+        channels = synthesizer.getChannels();
+
+        Instrument[] instr = synthesizer.getDefaultSoundbank()
+          .getInstruments();
+        synthesizer.loadInstrument(instr[0]);
+        System.out.println(channels.length);
+      }
+    }
+    catch (Exception ex) {
+      System.out.println("Could not load the MIDI synthesizer.");
+    }
   }
 
-  void lightControl() {
-    if (lightUp) light = (light < 5000)? light+40 : 5000;
-    if (lightDown) light = (light > -5000)? light-40 : -5000;
+  public void cleanUp() {
+    if (synthesizer != null)
+      synthesizer.close();
   }
 
-  void setLight() {
-    float val = (float)light/(float)width*float(255);
-    ambientLight((int)val, val, val);
-    pointLight(204, 153, 0, light, height/2, 400);
+  public void playNote(final int note, final int milliseconds) {
+    System.out.println("");
+
+    Thread t = new Thread() {
+      public void run() {
+        try {
+          if (!noSound && channels != null && channels.length > 0) {
+            channels[0].noteOn(note, 120);
+            sleep(milliseconds);
+            channels[0].noteOff(note);
+          }
+        } 
+        catch (Exception ex) {
+          System.out.println("ERROR: " + ex);
+        }
+      }
+    };
+    t.start();
   }
 
-  void cameraControl() {
-    if (rotateRight) {
-      camMov--;
-      camMov %= 360;
-    }
-    if (rotateLeft) {
-      camMov++;
-      camMov %= 360;
-    }
-    if (zoomOut) {
-      if (posCam.sub(new PVector(0, 0, 5)).z<-width)posCam.z=width;
-      posCam.sub(new PVector(0, 0, 5));
-    }
-    if (zoomIn) {
-      if (posCam.add(new PVector(0, 0, 5)).z>width)posCam.z=-width;
-      posCam.add(new PVector(0, 0, 5));
-    }
-
-    x = (width/2.0)*(1 + sin(radians(camMov)));
-    z = -(width/2.0)*(1 + cos(radians(camMov)));
+  public void playChord(int note1, int note2, int note3, int milliseconds) {
+    playChord(new int[] {note1, note2, note3}, milliseconds);
   }
 
- <p align="center"><img src="images/escena.png" alt="Escena" width="500" height="500"></br>Pantalla final</p>
+  public void playChord(final int[] notes, final int milliseconds) {
+    System.out.println("");
+
+    Thread t = new Thread() {
+      public void run() {
+        try {
+          if (!noSound && channels != null && channels.length > 0) {
+            int channel = 0;
+              for (int n : notes) {
+                channels[channel++].noteOn(n, 120);
+              }
+              sleep(milliseconds);
+              for (channel = 0; channel < notes.length; channel++) {
+                channels[channel].noteOff(notes[channel]);
+              }
+            }
+          }
+          catch (Exception ex) {
+            System.out.println("ERROR:" + ex);
+          }
+        }
+      };
+      t.start();
+    }
+
+    public void playScale(int note1, int note2, int note3, int note4, int note5, 
+      int note6, int note7, int note8, int milliseconds) {
+      playScale(new int[] {note1, note2, note3, note4, note5, note6, note7, note8}, milliseconds);
+    }
+
+    public void playScale(final int[] notes, final int milliseconds) {
+      Thread t = new Thread() {
+        public void run() {
+          try {
+            if (!noSound && channels != null && channels.length > 0) {
+              for (int n : notes) {
+                channels[0].noteOn(n, 120);
+                sleep(milliseconds);
+                channels[0].noteOff(n);
+              }
+            }
+          }
+          catch (Exception ex) {
+            System.out.println("ERROR:" + ex);
+          }
+        }
+      };
+      t.start();
+    }
+
+    private void sleep(int length) {
+      try {
+        Thread.sleep(length);
+      }
+      catch (Exception ex) {
+      }
+    }
+  }
+
+ <p align="center"><img src="images/piano.png" alt="Piano" width="500" height="500"></br>Pantalla final</p>
  
 
 
